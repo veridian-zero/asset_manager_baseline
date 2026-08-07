@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Heavy 3D Model Assets & Temporary Data
+Gladiator_Real_Data/
+*.flt
+*.rgb
+*.tga
+.zip_staging/
+.*_thumbs/
+
+# Temporary / OS Files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Export Outputs
+*.zip
+
+# Container & Storage Cache
+.podman/

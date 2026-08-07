@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DMSC Local Asset Manager & SISO Explorer</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --card-bg: #1e1e24;
+            --accent-color: #007acc;
+            --accent-hover: #0098ff;
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0a0;
+            --border-color: #2a2a32;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 1rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container { max-width: 1600px; width: 100%; }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.8rem;
+            margin-bottom: 1.5rem;
+            width: 100%;
+        }
+        .nav-brand { font-size: 1.2rem; font-weight: bold; color: #fff; }
+        .nav-tabs { display: flex; gap: 10px; }
+        .tab-btn {
+            background: var(--card-bg); color: var(--text-muted); border: 1px solid var(--border-color);
+            padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: bold;
+        }
+        .tab-btn.active { background: var(--accent-color); color: #fff; border-color: var(--accent-color); }
+
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 300px 380px 1fr;
+            gap: 20px;
+            height: 84vh;
+        }
+
+        .panel {
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            border-radius: 6px; padding: 1rem; overflow-y: auto; display: flex; flex-direction: column;
+        }
+
+        .panel h2 { font-size: 1rem; margin-top: 0; color: #fff; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; }
+
+        .catalog-item { padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--border-color); cursor: pointer; border-radius: 4px; }
+        .catalog-item:hover { background-color: #25252d; }
+        .catalog-item.active { background-color: var(--accent-color); color: #fff; }
+        .catalog-item.excluded-item { opacity: 0.55; border-left: 3px solid #ff5555; }
+        .catalog-item-title { font-weight: bold; font-size: 0.88rem; }
+        .catalog-item-sub { font-size: 0.75rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-top: 2px; }
+        .catalog-item.active .catalog-item-sub { color: #d0e8ff; }
+
+        .unmatched-badge { background: #d90429; color: #fff; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: bold; }
+        .excluded-badge { background: #555; color: #ff8888; font-size: 0.65rem; padding: 1px 5px; border-radius: 3px; font-weight: bold; }
+
+        /* Spinner Component */
+        .spinner-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted);
+            gap: 12px;
+            font-size: 0.82rem;
+        }
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .carousel-container { text-align: center; background: #16161a; border-radius: 4px; padding: 10px; margin-bottom: 1rem; border: 1px solid var(--border-color); }
+        .carousel-img { max-width: 100%; height: 240px; object-fit: contain; background: #121214; border-radius: 4px; }
+        .carousel-nav { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+        .nav-dot { background: var(--border-color); color: #fff; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; }
+        .nav-dot.active { background: var(--accent-color); }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .form-group { margin-bottom: 0.7rem; }
+        .form-group.full-width { grid-column: span 2; }
+        .form-group label { display: block; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; background: #121214; border: 1px solid var(--border-color); color: #fff;
+            padding: 0.45rem; border-radius: 4px; font-size: 0.82rem; box-sizing: border-box; font-family: inherit;
+        }
+        .form-group select { cursor: pointer; font-weight: 600; color: #00d2ff; }
+        .form-group textarea { height: 50px; resize: vertical; }
+
+        .inline-siso-box {
+            background: #141418; border: 1px solid var(--accent-color); border-radius: 6px;
+            padding: 0.8rem; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px;
+        }
+        .inline-siso-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .inline-siso-results { max-height: 140px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+        .inline-siso-card {
+            background: #1e1e24; border: 1px solid var(--border-color); padding: 7px 10px;
+            border-radius: 4px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .inline-siso-card:hover { border-color: var(--accent-hover); background: #252530; }
+
+        .siso-summary-card {
+            background: #1a1a22; border: 1px solid #2a2a38; border-left: 3px solid #00d2ff;
+            border-radius: 4px; padding: 8px 12px; margin-top: 6px; font-size: 0.78rem; display: flex; flex-direction: column; gap: 4px;
+        }
+        .siso-summary-row { display: flex; justify-content: space-between; align-items: center; }
+        .siso-summary-label { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
+        .siso-summary-val { color: #fff; font-weight: 500; }
+        .siso-summary-enum { color: #00d2ff; font-family: monospace; font-weight: bold; font-size: 0.85rem; }
+
+        .country-badge {
+            background: #1e3a29; color: #38ef7d; border: 1px solid #235c39;
+            font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 600; margin-left: 6px; white-space: nowrap;
+        }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+        .btn-group-sm { display: flex; gap: 6px; }
+        .action-btn {
+            flex: 1; background-color: var(--accent-color); color: #fff; border: none;
+            padding: 0.65rem; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.8rem;
+        }
+        .action-btn-sm {
+            background-color: var(--accent-color); color: #fff; border: none;
+            padding: 0.35rem 0.65rem; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 0.72rem; white-space: nowrap;
+        }
+        .action-btn:hover, .action-btn-sm:hover { background-color: var(--accent-hover); }
+
+        .siso-search-box { display: flex; gap: 10px; margin-bottom: 1.5rem; }
+        .siso-search-box input, .siso-search-box select {
+            background-color: var(--card-bg); border: 1px solid var(--border-color); color: #fff; padding: 0.75rem 1rem; border-radius: 6px; font-size: 1rem; outline: none;
+        }
+        .siso-search-box input { flex-grow: 1; }
+        .siso-results { display: flex; flex-direction: column; gap: 10px; }
+        .siso-card {
+            background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 6px;
+            padding: 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .siso-card:hover { border-color: var(--accent-hover); }
+        .enum-badge { background-color: #2d2d38; color: #00d2ff; font-family: monospace; padding: 0.3rem 0.6rem; border-radius: 4px; font-weight: bold; }
+
+        /* Modal Dialog Styling */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.75); display: none; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .modal-box {
+            background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 1.5rem 2rem; width: 440px; box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .progress-bar-bg {
+            width: 100%; height: 8px; background: #121214; border-radius: 4px; overflow: hidden; margin: 1rem 0; border: 1px solid var(--border-color);
+        }
+        .progress-bar-fill {
+            height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-color), #38ef7d); transition: width 0.3s ease;
+        }
+
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; background-color: var(--accent-color); color: #fff;
+            padding: 0.75rem 1.5rem; border-radius: 6px; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.5); z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="navbar">
+        <div class="nav-brand">DMSC Simulation Engineering Platform</div>
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('ams')">Asset Catalog (AMS)</button>
+            <button class="tab-btn" onclick="switchTab('siso')">SISO Ref Explorer</button>
+            <button class="tab-btn" style="background:#1e3a29; color:#38ef7d; border-color:#235c39;" onclick="openExportModal()">📦 Export Clean ZIP</button>
+        </div>
+    </div>
+
+    <!-- VIEW 1: AMS -->
+    <div id="viewAms" class="view-section active">
+        <div class="dashboard-grid">
+            <!-- Panel 1: Catalog List -->
+            <div class="panel">
+                <h2>Catalog Assets</h2>
+                <input type="text" id="catalogFilter" placeholder="Filter assets..." style="margin-bottom: 6px; padding: 6px; background:#121214; border:1px solid var(--border-color); color:#fff; border-radius:4px;" oninput="filterCatalog()">
+                
+                <div style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem;">
+                    <label style="color:#ffb703; cursor:pointer; font-weight:600;">
+                        <input type="checkbox" id="unmatchedOnly" onchange="filterCatalog()"> Show Unmatched Only
+                    </label>
+                    <label style="color:#ff8888; cursor:pointer; font-weight:600;">
+                        <input type="checkbox" id="showExcluded" onchange="filterCatalog()"> Show Excluded Assets
+                    </label>
+                </div>
+                
+                <div id="catalogList" style="overflow-y: auto; flex-grow: 1;"></div>
+            </div>
+
+            <!-- Panel 2: Visualiser -->
+            <div class="panel">
+                <h2>Visualiser & Render Angles</h2>
+                <div id="viewerContent" style="display: none; flex-direction: column; flex-grow: 1;">
+                    <div class="carousel-container">
+                        <img id="carouselImg" class="carousel-img" src="" alt="Thumbnail">
+                        <div class="carousel-nav" id="carouselNav"></div>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.4;">
+                        <p style="margin: 4px 0;"><strong>Path:</strong> <span id="lblLocation" style="color:#fff; word-break: break-all;"></span></p>
+                        <p style="margin: 4px 0;"><strong>Format:</strong> <span id="lblFormat" style="color:#fff;"></span> | <strong>Size:</strong> <span id="lblSize" style="color:#fff;"></span> KB</p>
+                    </div>
+                </div>
+                <div id="viewerEmpty" style="color: var(--text-muted); text-align: center; margin: auto;">Select an asset from the catalog.</div>
+            </div>
+
+            <!-- Panel 3: Dynamic Metadata Inspector + Integrated SISO Finder -->
+            <div class="panel">
+                <h2>Complete Metadata Inspector</h2>
+                <div id="editorContent" style="display: none; flex-direction: column; flex-grow: 1;">
+                    
+                    <div class="inline-siso-box">
+                        <div class="inline-siso-header">
+                            <div style="font-size: 0.75rem; font-weight: bold; color: var(--accent-color); text-transform: uppercase;">⚡ Quick SISO Identifier Finder</div>
+                            <div class="btn-group-sm">
+                                <button type="button" class="action-btn-sm" onclick="saveMetadata(true)">Save Sidecar</button>
+                            </div>
+                        </div>
+
+                        <!-- Read-only Active SISO Summary Card -->
+                        <div id="sisoSummaryCard" class="siso-summary-card">
+                            <div class="siso-summary-row">
+                                <div>
+                                    <span class="siso-summary-label">Enumeration: </span>
+                                    <span id="sumEnum" class="siso-summary-enum">Unmatched</span>
+                                </div>
+                                <span id="sumCountry" class="country-badge" style="display:none;"></span>
+                            </div>
+                            <div class="siso-summary-row" style="margin-top: 2px;">
+                                <span class="siso-summary-label">Type (Kind):</span>
+                                <span id="sumCategory" class="siso-summary-val" style="color:#ffb703;">-</span>
+                            </div>
+                            <div class="siso-summary-row">
+                                <span class="siso-summary-label">SubType:</span>
+                                <span id="sumSubType" class="siso-summary-val">-</span>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 6px; margin-top: 4px;">
+                            <input type="text" id="inlineSisoInput" placeholder="Live SISO search (e.g. Typhoon, 1.2.224)..." style="flex:1; padding:6px; background:#121214; border:1px solid var(--border-color); color:#fff; border-radius:4px; font-size:0.82rem;" oninput="onInlineSisoInput()">
+                        </div>
+                        <div id="inlineSisoResults" class="inline-siso-results"></div>
+                    </div>
+
+                    <form id="dynamicMetaForm" style="display: flex; flex-direction: column; flex-grow: 1;">
+                        <div id="dynamicFormFields" class="form-grid"></div>
+                        
+                        <div class="btn-group">
+                            <button type="button" class="action-btn" onclick="saveMetadata(true)">Save Sidecar</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="editorEmpty" style="color: var(--text-muted); text-align: center; margin: auto;">Select an asset to view and edit complete metadata.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VIEW 2: SISO Explorer -->
+    <div id="viewSiso" class="view-section">
+        <div class="panel" style="height: 80vh;">
+            <h2>Global SISO-REF-010 Database Search</h2>
+            <div class="siso-search-box" style="margin-top: 10px;">
+                <input type="text" id="globalSisoInput" placeholder="Search string or tuple ID (e.g. F-35, 1.2.225.1, Tomahawk)..." oninput="globalSisoSearch()">
+                <select id="globalDomainSelect" onchange="globalSisoSearch()">
+                    <option value="">All Domains</option>
+                    <option value="Land">Land</option>
+                    <option value="Air">Air</option>
+                    <option value="Surface">Surface</option>
+                    <option value="Subsurface">Subsurface</option>
+                    <option value="Space">Space</option>
+                    <option value="Munition">Munitions</option>
+                </select>
+            </div>
+            <div id="globalSisoResults" class="siso-results" style="overflow-y: auto; flex-grow: 1;">
+                <div style="color: var(--text-muted); text-align: center; margin-top: 2rem;">Type a search term above to explore DIS/HLA enumerations.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Export Options & Confirmation Modal -->
+<div id="exportFilterModal" class="modal-overlay">
+    <div class="modal-box">
+        <h3 style="margin-top:0; color:#fff; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">📦 Export Catalog Options</h3>
+        
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+            <div>
+                <label style="display:block; font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:4px;">Export Scope</label>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btnScopeFull" onclick="setExportScope('FULL')" style="flex:1; padding:6px; background:#1e3a29; color:#38ef7d; border:1px solid #235c39; border-radius:4px; font-weight:bold; cursor:pointer;">Full Catalog</button>
+                    <button type="button" id="btnScopeSample" onclick="setExportScope('SAMPLE')" style="flex:1; padding:6px; background:var(--card-bg); color:var(--text-muted); border:1px solid var(--border-color); border-radius:4px; font-weight:bold; cursor:pointer;">Random Sample</button>
+                </div>
+            </div>
+
+            <div id="sampleSizeContainer" style="display:none;">
+                <label style="display:block; font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:2px;">Sample Count</label>
+                <input type="number" id="inputSampleSize" value="10" min="1" max="500" style="width:100%; padding:6px; background:#121214; border:1px solid var(--border-color); color:#fff; border-radius:4px; box-sizing:border-box;" oninput="updateExportEstimate()">
+            </div>
+
+            <div>
+                <label style="display:block; font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:bold; margin-bottom:2px;">Domain Filter</label>
+                <select id="exportDomainFilter" style="width:100%; padding:6px; background:#121214; border:1px solid var(--border-color); color:#fff; border-radius:4px; box-sizing:border-box;" onchange="updateExportEstimate()">
+                    <option value="ALL">All Domains</option>
+                    <option value="Surface">Surface</option>
+                    <option value="Air">Air</option>
+                    <option value="Land">Land</option>
+                </select>
+            </div>
+
+            <div style="background:#121214; border:1px solid var(--border-color); border-radius:6px; padding:10px; font-size:0.78rem; display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                <div style="display:flex; justify-space-between;">
+                    <span style="color:var(--text-muted);">Included Assets:</span>
+                    <span id="estAssetCount" style="color:#fff; font-weight:bold;">0 assets</span>
+                </div>
+                <div style="display:flex; justify-space-between;">
+                    <span style="color:var(--text-muted);">Estimated PNG Renders:</span>
+                    <span id="estThumbCount" style="color:#fff; font-weight:bold;">~0 images</span>
+                </div>
+                <div style="display:flex; justify-space-between; border-top:1px solid var(--border-color); padding-top:4px; margin-top:2px;">
+                    <span style="color:#38ef7d; font-weight:bold;">Approximate ZIP Footprint:</span>
+                    <span id="estZipSize" style="color:#38ef7d; font-weight:bold;">~0 MB</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" class="action-btn" style="background:#444;" onclick="closeExportModal()">Cancel</button>
+            <button type="button" class="action-btn" style="background:#1e3a29; color:#38ef7d; border:1px solid #235c39;" onclick="confirmAndStartExport()">Start Export</button>
+        </div>
+    </div>
+</div>
+
+<!-- Export Progress Stream Modal -->
+<div id="exportModal" class="modal-overlay">
+    <div class="modal-box" style="width: 520px; text-align: left;">
+        <h3 style="margin-top:0; color:#fff; text-align: center;">Packaging Catalog Export</h3>
+        <div id="exportModalStatus" style="font-size:0.85rem; font-weight:bold; color:var(--accent-color); text-align:center;">Stage 1 of 2: Initializing...</div>
+        <div id="exportModalCount" style="font-size:0.75rem; color:var(--text-muted); text-align:center; margin-top:2px;">Item 0 of 0</div>
+        
+        <div class="progress-bar-bg">
+            <div id="exportProgressBar" class="progress-bar-fill"></div>
+        </div>
+
+        <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; text-transform: uppercase;">Live Export Log</div>
+        <div id="exportConsole" style="background:#121214; border:1px solid var(--border-color); border-radius:4px; height:120px; overflow-y:auto; padding:8px; font-family:monospace; font-size:0.72rem; color:#aaa; line-height:1.4;"></div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Saved successfully!</div>
+
+<script>
+    const API_BASE = `${window.location.protocol}//${window.location.host}`;
+    let catalogData = [];
+    let filteredCatalogData = [];
+    let currentIndex = -1;
+    let currentThumbnails = [];
+    let currentThumbIndex = 0;
+    let sisoDebounce;
+    let inlineSisoDebounce;
+    let currentExportScope = 'FULL';
+
+    const FULL_WIDTH_FIELDS = [
+        'Name', 'Name*', 'Description', 'Description*', 'Enumeration', 'AssetLocation', 'AssetLocation*',
+        'LODs', 'Articulations', 'AppearanceStates', 'DamageStates', 'PackageList', 
+        'Parameterisation', 'TextureWarnings', 'ExclusionReason'
+    ];
+
+    const READONLY_FIELDS = [
+        'AssetID', 'StorageSize', 'Format', 'PackageList', 'TextureResolution', 'TextureWarnings'
+    ];
+
+    function escapeQuotes(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '&quot;');
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+        if (tab === 'ams') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('viewAms').classList.add('active');
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('viewSiso').classList.add('active');
+        }
+    }
+
+    function showCatalogLoading() {
+        const listEl = document.getElementById('catalogList');
+        listEl.innerHTML = `
+            <div class="spinner-container">
+                <div class="spinner"></div>
+                <div>Scanning metadata sidecars...</div>
+            </div>
+        `;
+    }
+
+    function loadCatalog() {
+        showCatalogLoading();
+        fetch(`${API_BASE}/api/catalog`)
+            .then(res => res.json())
+            .then(data => {
+                catalogData = data;
+                filterCatalog();
+            })
+            .catch(() => {
+                document.getElementById('catalogList').innerHTML = '<div style="color:#ff5555; text-align:center; padding:1rem; font-size:0.8rem;">Failed to load catalog assets.</div>';
+            });
+    }
+
+    loadCatalog();
+
+    function openExportModal() {
+        document.getElementById('exportFilterModal').style.display = 'flex';
+        updateExportEstimate();
+    }
+
+    function closeExportModal() {
+        document.getElementById('exportFilterModal').style.display = 'none';
+    }
+
+    function setExportScope(scope) {
+        currentExportScope = scope;
+        const btnFull = document.getElementById('btnScopeFull');
+        const btnSample = document.getElementById('btnScopeSample');
+        const sampleContainer = document.getElementById('sampleSizeContainer');
+
+        if (scope === 'FULL') {
+            btnFull.style.background = '#1e3a29';
+            btnFull.style.color = '#38ef7d';
+            btnFull.style.borderColor = '#235c39';
+
+            btnSample.style.background = 'var(--card-bg)';
+            btnSample.style.color = 'var(--text-muted)';
+            btnSample.style.borderColor = 'var(--border-color)';
+
+            sampleContainer.style.display = 'none';
+        } else {
+            btnSample.style.background = '#1e3a29';
+            btnSample.style.color = '#38ef7d';
+            btnSample.style.borderColor = '#235c39';
+
+            btnFull.style.background = 'var(--card-bg)';
+            btnFull.style.color = 'var(--text-muted)';
+            btnFull.style.borderColor = 'var(--border-color)';
+
+            sampleContainer.style.display = 'block';
+        }
+        updateExportEstimate();
+    }
+
+    function updateExportEstimate() {
+        const domainVal = document.getElementById('exportDomainFilter').value;
+        const sampleSize = parseInt(document.getElementById('inputSampleSize').value) || 10;
+
+        let matching = catalogData.filter(item => {
+            const status = (item.Status || 'Active').toLowerCase();
+            if (status === 'excluded') return false;
+            if (domainVal !== 'ALL' && (item.Domain || '').toLowerCase() !== domainVal.toLowerCase()) return false;
+            return true;
+        });
+
+        let count = matching.length;
+        if (currentExportScope === 'SAMPLE') {
+            count = Math.min(count, sampleSize);
+        }
+
+        const estThumbs = count * 5;
+        const estMegabytes = (count * 0.55).toFixed(1);
+
+        document.getElementById('estAssetCount').innerText = `${count} asset(s)`;
+        document.getElementById('estThumbCount').innerText = `~${estThumbs} images`;
+        document.getElementById('estZipSize').innerText = `~${estMegabytes} MB`;
+    }
+
+    function confirmAndStartExport() {
+        closeExportModal();
+        const domainVal = document.getElementById('exportDomainFilter').value;
+        const sampleSize = parseInt(document.getElementById('inputSampleSize').value) || 10;
+        const isSample = currentExportScope === 'SAMPLE';
+
+        const params = new URLSearchParams({
+            sample: isSample,
+            sample_size: sampleSize,
+            domain: domainVal
+        });
+
+        startExportStream(`${API_BASE}/api/export-stream?${params.toString()}`);
+    }
+
+    async function startExportStream(streamUrl) {
+        let fileHandle = null;
+
+        if ('showSaveFilePicker' in window) {
+            try {
+                fileHandle = await window.showSaveFilePicker({
+                    suggestedName: 'catalog_export.zip',
+                    types: [{
+                        description: 'ZIP Archive',
+                        accept: { 'application/zip': ['.zip'] },
+                    }],
+                });
+            } catch (err) {
+                return;
+            }
+        }
+
+        const modal = document.getElementById('exportModal');
+        const stageText = document.getElementById('exportModalStatus');
+        const countText = document.getElementById('exportModalCount');
+        const progressBar = document.getElementById('exportProgressBar');
+        const consoleBox = document.getElementById('exportConsole');
+
+        modal.style.display = 'flex';
+        progressBar.style.width = '0%';
+        consoleBox.innerHTML = '';
+
+        const addLog = (msg) => {
+            const line = document.createElement('div');
+            line.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleBox.appendChild(line);
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        };
+
+        const evtSource = new EventSource(streamUrl);
+
+        evtSource.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+
+            if (data.stageName) {
+                stageText.innerText = `Stage ${data.stage} of 2: ${data.stageName}`;
+            }
+            if (data.processedItems !== undefined) {
+                countText.innerText = `Processing Item ${data.processedItems} of ${data.totalItems}`;
+            }
+            if (data.progress !== undefined) {
+                progressBar.style.width = `${data.progress}%`;
+            }
+            if (data.log) {
+                addLog(data.log);
+            }
+
+            if (data.downloadKey) {
+                evtSource.close();
+                stageText.innerText = 'Finalizing download...';
+                addLog('Streaming generated archive to disk...');
+
+                try {
+                    const downloadUrl = `${API_BASE}/api/download-export/${data.downloadKey}`;
+                    if (fileHandle) {
+                        const res = await fetch(downloadUrl);
+                        const blob = await res.blob();
+                        const writable = await fileHandle.createWritable();
+                        await writable.write(blob);
+                        await writable.close();
+                    } else {
+                        window.location.href = downloadUrl;
+                    }
+                    showToast('Clean ZIP exported successfully!');
+                } catch (err) {
+                    showToast('Error saving export file.');
+                } finally {
+                    setTimeout(() => { modal.style.display = 'none'; }, 800);
+                }
+            }
+        };
+
+        evtSource.onerror = () => {
+            evtSource.close();
+            stageText.innerText = 'Export failed.';
+            addLog('ERROR: Stream connection lost.');
+            setTimeout(() => { modal.style.display = 'none'; }, 2000);
+        };
+    }
+
+    function getVal(item, keys) {
+        if (!item) return '';
+        for (let k of keys) {
+            const target = k.replace(/[*_\s]/g, '').toLowerCase();
+            for (let actualKey of Object.keys(item)) {
+                if (actualKey.replace(/[*_\s]/g, '').toLowerCase() === target) {
+                    return item[actualKey] || '';
+                }
+            }
+        }
+        return '';
+    }
+
+    function renderCatalogList(items) {
+        const listEl = document.getElementById('catalogList');
+        if (!items || items.length === 0) {
+            listEl.innerHTML = '<div style="color:var(--text-muted); font-size:0.8rem; text-align:center; padding:1rem;">No catalog entries found.</div>';
+            return;
+        }
+        listEl.innerHTML = items.map((item) => {
+            const originalIndex = catalogData.indexOf(item);
+
+            let name = getVal(item, ['Name', 'Name*', 'ModelName', 'File']);
+            if (!name && Object.keys(item).length > 0) {
+                name = item[Object.keys(item)[0]];
+            }
+            
+            const domain = getVal(item, ['Domain', 'Category']) || 'Platform';
+            const size = getVal(item, ['StorageSize', 'StorageSize*', 'Size']) || '0';
+            const sisoEnum = getVal(item, ['Enumeration']);
+            const status = (getVal(item, ['Status']) || 'Active').toLowerCase();
+
+            const isUnmatched = !sisoEnum || sisoEnum.trim() === '';
+            const isExcluded = status === 'excluded';
+
+            return `
+                <div id="catalog-item-${originalIndex}" class="catalog-item ${originalIndex === currentIndex ? 'active' : ''} ${isExcluded ? 'excluded-item' : ''}" onclick="selectAsset(${originalIndex})">
+                    <div class="catalog-item-title">${name || 'Unnamed Asset'}</div>
+                    <div class="catalog-item-sub">
+                        <span>${domain} • ${size} KB</span>
+                        <div>
+                            ${isExcluded ? '<span class="excluded-badge">EXCLUDED</span>' : ''}
+                            ${isUnmatched && !isExcluded ? '<span class="unmatched-badge">NO SISO</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function filterCatalog() {
+        const query = document.getElementById('catalogFilter').value.toLowerCase();
+        const unmatchedOnly = document.getElementById('unmatchedOnly').checked;
+        const showExcluded = document.getElementById('showExcluded').checked;
+
+        filteredCatalogData = catalogData.filter(item => {
+            const name = (getVal(item, ['Name', 'Name*', 'ModelName', 'File']) || '').toLowerCase();
+            const loc = (getVal(item, ['AssetLocation', 'AssetLocation*', 'Location']) || '').toLowerCase();
+            const sisoEnum = getVal(item, ['Enumeration']);
+            const status = (getVal(item, ['Status']) || 'Active').toLowerCase();
+
+            const matchesQuery = name.includes(query) || loc.includes(query);
+            const matchesUnmatched = !unmatchedOnly || (!sisoEnum || sisoEnum.trim() === '');
+            const matchesStatus = showExcluded || status !== 'excluded';
+
+            return matchesQuery && matchesUnmatched && matchesStatus;
+        });
+
+        renderCatalogList(filteredCatalogData);
+    }
+
+    function selectAsset(originalIndex) {
+        if (originalIndex < 0 || originalIndex >= catalogData.length) return;
+
+        currentIndex = originalIndex;
+        const item = catalogData[originalIndex];
+
+        const listItems = document.querySelectorAll('.catalog-item');
+        listItems.forEach(el => el.classList.remove('active'));
+
+        const activeEl = document.getElementById(`catalog-item-${originalIndex}`);
+        if (activeEl) {
+            activeEl.classList.add('active');
+            activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+
+        document.getElementById('viewerEmpty').style.display = 'none';
+        document.getElementById('viewerContent').style.display = 'flex';
+        document.getElementById('editorEmpty').style.display = 'none';
+        document.getElementById('editorContent').style.display = 'flex';
+
+        const location = getVal(item, ['AssetLocation', 'AssetLocation*', 'Location']);
+        const size = getVal(item, ['StorageSize', 'StorageSize*', 'Size']);
+        const format = getVal(item, ['Format', 'Format*']);
+        const name = getVal(item, ['Name', 'Name*', 'ModelName']);
+
+        document.getElementById('lblLocation').innerText = location;
+        document.getElementById('lblSize').innerText = size;
+        document.getElementById('lblFormat').innerText = format;
+
+        const cleanSearchTerm = name.replace(/^Gladiator_/i, '').replace(/_/g, ' ');
+        document.getElementById('inlineSisoInput').value = cleanSearchTerm;
+        searchInlineSiso();
+
+        const rawThumbs = getVal(item, ['Thumbnails', 'Images']);
+        currentThumbnails = rawThumbs.split('|').map(t => t.trim()).filter(t => t);
+        currentThumbIndex = 0;
+        renderCarousel();
+
+        buildDynamicForm(item);
+        updateSisoSummaryCard(item);
+    }
+
+    document.addEventListener('keydown', (e) => {
+        const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+        if (['input', 'textarea', 'select'].includes(activeTag)) return;
+
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!filteredCatalogData || filteredCatalogData.length === 0) return;
+            e.preventDefault();
+
+            let currentFilteredIndex = filteredCatalogData.findIndex(item => catalogData.indexOf(item) === currentIndex);
+
+            if (e.key === 'ArrowDown') {
+                currentFilteredIndex = currentFilteredIndex < filteredCatalogData.length - 1 ? currentFilteredIndex + 1 : 0;
+            } else if (e.key === 'ArrowUp') {
+                currentFilteredIndex = currentFilteredIndex > 0 ? currentFilteredIndex - 1 : filteredCatalogData.length - 1;
+            }
+
+            const targetItem = filteredCatalogData[currentFilteredIndex];
+            if (targetItem) {
+                const targetOriginalIndex = catalogData.indexOf(targetItem);
+                selectAsset(targetOriginalIndex);
+            }
+        }
+    });
+
+    function updateSisoSummaryCard(item) {
+        const enumVal = getVal(item, ['Enumeration']) || 'Unmatched';
+        const domainVal = getVal(item, ['Domain']) || '';
+        const countryVal = getVal(item, ['CountryOfOrigin']) || '';
+        const typeVal = getVal(item, ['Type']) || '-';
+        const subTypeVal = getVal(item, ['SubType']) || '-';
+
+        document.getElementById('sumEnum').innerText = enumVal;
+        document.getElementById('sumCategory').innerText = typeVal + (domainVal ? ` (${domainVal})` : '');
+        document.getElementById('sumSubType').innerText = subTypeVal;
+
+        const countryBadge = document.getElementById('sumCountry');
+        if (countryVal) {
+            countryBadge.innerText = countryVal;
+            countryBadge.style.display = 'inline-block';
+        } else {
+            countryBadge.style.display = 'none';
+        }
+    }
+
+    function buildDynamicForm(item) {
+        const formContainer = document.getElementById('dynamicFormFields');
+        formContainer.innerHTML = '';
+
+        if (!('Status' in item)) item['Status'] = 'Active';
+        if (!('ExclusionReason' in item)) item['ExclusionReason'] = '';
+
+        Object.keys(item).forEach(key => {
+            const cleanKey = key.trim();
+            const lowerKey = cleanKey.toLowerCase();
+            const val = item[key] || '';
+            const isFullWidth = FULL_WIDTH_FIELDS.some(f => lowerKey.includes(f.toLowerCase()));
+            const isReadOnly = READONLY_FIELDS.some(f => lowerKey === f.toLowerCase());
+            const isMultiline = val.includes('\n') || ['description', 'lods', 'articulations', 'appearancestates', 'damagestates', 'packagelist', 'texturewarnings'].some(f => lowerKey.includes(f));
+
+            const group = document.createElement('div');
+            group.className = `form-group ${isFullWidth ? 'full-width' : ''}`;
+            if (lowerKey === 'exclusionreason') {
+                group.id = 'grpExclusionReason';
+                group.style.display = (item['Status'] || '').toLowerCase() === 'excluded' ? 'block' : 'none';
+            }
+
+            const label = document.createElement('label');
+            label.innerText = cleanKey;
+
+            let inputEl;
+
+            if (lowerKey === 'status') {
+                inputEl = document.createElement('select');
+                inputEl.innerHTML = `
+                    <option value="Active" ${val === 'Active' ? 'selected' : ''}>Active</option>
+                    <option value="Excluded" ${val === 'Excluded' ? 'selected' : ''}>Excluded</option>
+                `;
+                inputEl.onchange = (e) => {
+                    const reasonGrp = document.getElementById('grpExclusionReason');
+                    if (reasonGrp) {
+                        reasonGrp.style.display = e.target.value === 'Excluded' ? 'block' : 'none';
+                    }
+                };
+            } else if (isMultiline) {
+                inputEl = document.createElement('textarea');
+                inputEl.rows = val.split('\n').length > 3 ? 4 : 2;
+            } else {
+                inputEl = document.createElement('input');
+                inputEl.type = 'text';
+            }
+
+            inputEl.name = key;
+            if (lowerKey !== 'status') inputEl.value = val;
+
+            if (isReadOnly) {
+                inputEl.readOnly = true;
+                inputEl.style.color = 'var(--text-muted)';
+            }
+            if (lowerKey.includes('enumeration')) {
+                inputEl.style.fontFamily = 'monospace';
+                inputEl.style.color = '#00d2ff';
+                inputEl.style.fontWeight = 'bold';
+            }
+
+            group.appendChild(label);
+            group.appendChild(inputEl);
+            formContainer.appendChild(group);
+        });
+    }
+
+    function renderCarousel() {
+        const imgEl = document.getElementById('carouselImg');
+        const navEl = document.getElementById('carouselNav');
+
+        if (currentThumbnails.length === 0) {
+            imgEl.src = '';
+            navEl.innerHTML = '<span style="font-size:0.75rem; color:var(--text-muted)">No thumbnails found</span>';
+            return;
+        }
+
+        let thumbFile = currentThumbnails[currentThumbIndex];
+        thumbFile = thumbFile.replace(/^.*[\\\/]/, '');
+
+        imgEl.src = `/media/${thumbFile}`;
+
+        const labels = ['Front', 'Rear', 'Left', 'Right', 'Top'];
+        navEl.innerHTML = currentThumbnails.map((_, i) => `
+            <button class="nav-dot ${i === currentThumbIndex ? 'active' : ''}" onclick="setThumb(${i})">${labels[i] || 'Angle ' + (i+1)}</button>
+        `).join('');
+    }
+
+    function setThumb(i) {
+        currentThumbIndex = i;
+        renderCarousel();
+    }
+
+    function onInlineSisoInput() {
+        clearTimeout(inlineSisoDebounce);
+        inlineSisoDebounce = setTimeout(() => {
+            searchInlineSiso();
+        }, 250);
+    }
+
+    function searchInlineSiso() {
+        const query = document.getElementById('inlineSisoInput').value.trim();
+        const resultsEl = document.getElementById('inlineSisoResults');
+
+        if (!query) {
+            resultsEl.innerHTML = '<div style="font-size:0.75rem; color:var(--text-muted); padding:4px;">Type a search term above...</div>';
+            return;
+        }
+
+        fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&limit=6`)
+            .then(res => res.json())
+            .then(results => {
+                if (!results || results.length === 0) {
+                    resultsEl.innerHTML = `<div style="font-size:0.75rem; color:var(--text-muted); padding:4px;">No matches found for "${query}".</div>`;
+                    return;
+                }
+                resultsEl.innerHTML = results.map(r => {
+                    const countryName = r.match.country || r.match.countryOfOrigin || '';
+                    
+                    const safeEnum = escapeQuotes(r.match.enumeration);
+                    const safeDomain = escapeQuotes(r.match.domain);
+                    const safeCountry = escapeQuotes(countryName);
+                    const safeKind = escapeQuotes(r.match.kind || r.match.type || '');
+                    const safeSubType = escapeQuotes(r.match.subType);
+
+                    return `
+                        <div class="inline-siso-card" onclick="applySisoInline('${safeEnum}', '${safeDomain}', '${safeCountry}', '${safeKind}', '${safeSubType}')">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px; flex:1; min-width:0;">
+                                <span style="color:#00d2ff; font-family:monospace; font-weight:bold; font-size:0.82rem;">${r.match.enumeration}</span>
+                                <span style="color:#fff; font-size:0.78rem; font-weight:500;">- ${r.match.subType}</span>
+                                ${countryName ? `<span class="country-badge">${countryName}</span>` : ''}
+                            </div>
+                            <span style="font-size:0.72rem; color:#ffb703; font-weight:bold; margin-left:8px;">${r.score}% Match</span>
+                        </div>
+                    `;
+                }).join('');
+            })
+            .catch(() => {
+                resultsEl.innerHTML = '<div style="font-size:0.75rem; color:#ff5555; padding:4px;">Error querying SISO API.</div>';
+            });
+    }
+
+    function applySisoInline(enumId, domain, country, kindVal, subType) {
+        const form = document.getElementById('dynamicMetaForm');
+        
+        const setField = (keyName, val) => {
+            const inputs = form.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                const cleanInputName = input.name.replace(/[*_\s]/g, '').toLowerCase();
+                if (cleanInputName === keyName.toLowerCase()) {
+                    input.value = val;
+                }
+            });
+        };
+
+        setField('enumeration', enumId);
+        setField('domain', domain);
+        setField('countryoforigin', country);
+        setField('type', kindVal);
+        setField('subtype', subType);
+
+        document.getElementById('sumEnum').innerText = enumId;
+        document.getElementById('sumCategory').innerText = kindVal + (domain ? ` (${domain})` : '');
+        document.getElementById('sumSubType').innerText = subType;
+        
+        const countryBadge = document.getElementById('sumCountry');
+        if (country) {
+            countryBadge.innerText = country;
+            countryBadge.style.display = 'inline-block';
+        } else {
+            countryBadge.style.display = 'none';
+        }
+
+        showToast(`Applied ${enumId} (${subType})!`);
+    }
+
+    function saveMetadata(saveSidecar = true) {
+        if (currentIndex < 0) return;
+
+        const item = catalogData[currentIndex];
+        const form = document.getElementById('dynamicMetaForm');
+        const formData = new FormData(form);
+
+        const payload = { "saveSidecar": saveSidecar };
+
+        formData.forEach((value, key) => {
+            payload[key] = value;
+            item[key] = value;
+        });
+
+        fetch(`${API_BASE}/api/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            showToast(res.message || 'Saved successfully!');
+            filterCatalog();
+        })
+        .catch(() => showToast('Error saving metadata!'));
+    }
+
+    function globalSisoSearch() {
+        clearTimeout(sisoDebounce);
+        sisoDebounce = setTimeout(() => {
+            const query = document.getElementById('globalSisoInput').value.trim();
+            const domain = document.getElementById('globalDomainSelect').value;
+            const container = document.getElementById('globalSisoResults');
+
+            if (!query) {
+                container.innerHTML = '<div style="color: var(--text-muted); text-align: center; margin-top: 2rem;">Type a search term above to explore DIS/HLA enumerations.</div>';
+                return;
+            }
+
+            fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}&domain=${encodeURIComponent(domain)}&limit=15`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data || data.length === 0) {
+                        container.innerHTML = '<div style="color: var(--text-muted); text-align: center;">No matching entities found.</div>';
+                        return;
+                    }
+                    container.innerHTML = data.map(item => `
+                        <div class="siso-card" onclick="navigator.clipboard.writeText('${item.match.enumeration}'); showToast('Copied ${item.match.enumeration}!');">
+                            <div>
+                                <div style="font-weight:bold; color:#fff; margin-bottom:2px;">${item.match.subType} <span style="font-size:0.75rem; background:#2a2a32; color:#ffb703; padding:2px 6px; border-radius:10px;">${item.score}% Match</span></div>
+                                <div style="font-size:0.8rem; color:var(--text-muted);">${item.match.domain} • ${item.match.country}</div>
+                            </div>
+                            <span class="enum-badge">${item.match.enumeration}</span>
+                        </div>
+                    `).join('');
+                });
+        }, 200);
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.style.display = 'block';
+        setTimeout(() => { t.style.display = 'none'; }, 2500);
+    }
+</script>
+
+</body>
+</html>
